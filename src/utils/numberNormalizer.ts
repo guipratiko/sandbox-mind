@@ -1,0 +1,196 @@
+/**
+ * Utilitário para normalização de números de telefone
+ * Suporta diversos formatos de entrada e normaliza para formato internacional
+ * 
+ * Exemplos de entrada aceitos:
+ * - +55 0 62 99844-8536
+ * - 5562 998448-536
+ * - 062 9 9844-8536
+ * - 6298448536
+ * 
+ * Saída: 5562998448536 (DDI 55 como padrão se não fornecido)
+ */
+
+/**
+ * Remove todos os caracteres não numéricos de uma string
+ */
+const removeNonNumeric = (value: string): string => {
+  return value.replace(/\D/g, '');
+};
+
+/**
+ * Normaliza um número de telefone para formato internacional
+ * @param phone - Número de telefone em qualquer formato
+ * @param defaultDDI - DDI padrão a ser usado se não fornecido (padrão: 55 para Brasil)
+ * @returns Número normalizado no formato DDI + DDD + número (ex: 5562998448536)
+ */
+export const normalizePhone = (phone: string, defaultDDI: string = '55'): string | null => {
+  if (!phone || typeof phone !== 'string') {
+    return null;
+  }
+
+  // Remove todos os caracteres não numéricos
+  const digitsOnly = removeNonNumeric(phone);
+
+  if (digitsOnly.length === 0) {
+    return null;
+  }
+
+  // Se começar com 0, remover (ex: 062998448536 -> 6298448536)
+  let normalized = digitsOnly.startsWith('0') ? digitsOnly.substring(1) : digitsOnly;
+
+  // Verificar se já tem DDI (começa com 55 para Brasil)
+  // Números brasileiros com DDI têm 12 ou 13 dígitos (55 + DDD + número)
+  if (normalized.startsWith('55') && (normalized.length === 12 || normalized.length === 13)) {
+    // Já tem DDI, retornar como está
+    return normalized;
+  }
+
+  // Números brasileiros sem DDI:
+  // - 10 dígitos: DDD (2) + número fixo (8 dígitos)
+  // - 11 dígitos: DDD (2) + número celular (9 dígitos)
+  if (normalized.length === 10 || normalized.length === 11) {
+    // Número completo sem DDI: adicionar DDI padrão (55)
+    return `${defaultDDI}${normalized}`;
+  }
+
+  // Se tem 12 ou 13 dígitos mas não começa com 55, pode ser:
+  // - Número de outro país (já tem DDI diferente)
+  // - Número brasileiro mal formatado (tem DDD duplicado ou algo assim)
+  // Por segurança, se começa com DDD brasileiro válido, adicionar 55
+  if (normalized.length === 12 || normalized.length === 13) {
+    const firstTwo = normalized.substring(0, 2);
+    const validDDDs = ['11', '12', '13', '14', '15', '16', '17', '18', '19', '21', '22', '24', '27', '28', '31', '32', '33', '34', '35', '37', '38', '41', '42', '43', '44', '45', '46', '47', '48', '49', '51', '53', '54', '61', '62', '63', '64', '65', '66', '67', '68', '69', '71', '73', '74', '75', '77', '79', '81', '82', '83', '84', '85', '86', '87', '88', '89', '91', '92', '93', '94', '95', '96', '97', '98', '99'];
+    if (validDDDs.includes(firstTwo)) {
+      // Parece número brasileiro sem DDI, adicionar 55
+      return `${defaultDDI}${normalized}`;
+    }
+    // Pode ser de outro país, retornar como está
+    return normalized;
+  }
+
+  // Se tem mais de 13 dígitos, provavelmente é de outro país ou formato inválido
+  if (normalized.length > 13) {
+    return normalized;
+  }
+
+  // Número incompleto (menos de 10 dígitos), retornar null
+  if (normalized.length < 10) {
+    return null;
+  }
+
+  // Fallback: adicionar DDI padrão
+  return `${defaultDDI}${normalized}`;
+};
+
+/**
+ * Normaliza uma lista de números de telefone
+ * @param phones - Array de números de telefone
+ * @param defaultDDI - DDI padrão
+ * @returns Array de números normalizados (filtra nulls)
+ */
+export const normalizePhoneList = (
+  phones: string[],
+  defaultDDI: string = '55'
+): string[] => {
+  return phones
+    .map((phone) => normalizePhone(phone, defaultDDI))
+    .filter((phone): phone is string => phone !== null);
+};
+
+/**
+ * Extrai telefone do JID (WhatsApp ID)
+ * @param jid - JID completo (ex: 556298448536@s.whatsapp.net ou 556298448536@lid)
+ * @returns Número de telefone extraído (ex: 556298448536)
+ */
+export const extractPhoneFromJid = (jid: string): string => {
+  if (!jid) return '';
+  // Formato: 556298448536@s.whatsapp.net ou 556298448536@lid
+  const match = jid.match(/^(\d+)@/);
+  return match ? match[1] : jid;
+};
+
+/**
+ * Formata um número de telefone brasileiro para exibição
+ * Remove DDI 55 e formata no padrão: (XX)9 XXXX-XXXX
+ * @param phone - Número de telefone (pode ter DDI, pode ser JID, ou número limpo)
+ * @returns Número formatado (ex: (62)9 9844-8536)
+ * 
+ * Exemplo: 
+ * - 556298448536@s.whatsapp.net -> (62)9 9844-8536
+ * - 556298448536 -> (62)9 9844-8536
+ * - 6298448536 -> (62)9 9844-8536
+ */
+export const formatBrazilianPhone = (phone: string): string => {
+  if (!phone) return '';
+  
+  // Se for JID, extrair o número primeiro
+  let rawPhone = phone;
+  if (phone.includes('@')) {
+    rawPhone = extractPhoneFromJid(phone);
+  }
+  
+  // Remover caracteres não numéricos
+  let cleanPhone = rawPhone.replace(/\D/g, '');
+  
+  // Remover DDI 55 (Brasil) se presente
+  if (cleanPhone.startsWith('55') && cleanPhone.length > 10) {
+    cleanPhone = cleanPhone.substring(2);
+  }
+  
+  // Validar se tem pelo menos 10 dígitos (DDD + número)
+  if (cleanPhone.length < 10) {
+    return phone; // Retornar original se não tiver formato válido
+  }
+  
+  // Extrair DDD (2 primeiros dígitos) e número
+  const ddd = cleanPhone.substring(0, 2);
+  let numberOnly = cleanPhone.substring(2);
+  
+  // Formatar no padrão: (XX)9 XXXX-XXXX
+  if (numberOnly.length === 9) {
+    // Número com 9º dígito: 998448536 -> (62)9 9844-8536
+    return `(${ddd})${numberOnly.substring(0, 1)} ${numberOnly.substring(1, 5)}-${numberOnly.substring(5)}`;
+  } else if (numberOnly.length === 8) {
+    // Número sem 9º dígito: adicionar 9 -> (62)9 9844-8536
+    return `(${ddd})9 ${numberOnly.substring(0, 4)}-${numberOnly.substring(4)}`;
+  }
+  
+  // Se não couber no padrão, retornar original
+  return phone;
+};
+
+/**
+ * Garante que um número está normalizado
+ * Remove @s.whatsapp.net se presente e normaliza
+ * @param phone - Número de telefone (pode ter @s.whatsapp.net)
+ * @param defaultDDI - DDI padrão
+ * @returns Número normalizado ou null se inválido
+ */
+export const ensureNormalizedPhone = (phone: string, defaultDDI: string = '55'): string | null => {
+  if (!phone || typeof phone !== 'string') {
+    return null;
+  }
+
+  // Remover @s.whatsapp.net se presente
+  let cleanPhone = phone.replace('@s.whatsapp.net', '').trim();
+
+  // Normalizar
+  return normalizePhone(cleanPhone, defaultDDI);
+};
+
+/**
+ * Garante que uma lista de números está normalizada
+ * @param phones - Array de números de telefone
+ * @param defaultDDI - DDI padrão
+ * @returns Array de números normalizados (filtra nulls)
+ */
+export const ensureNormalizedPhoneList = (
+  phones: string[],
+  defaultDDI: string = '55'
+): string[] => {
+  return phones
+    .map((phone) => ensureNormalizedPhone(phone, defaultDDI))
+    .filter((phone): phone is string => phone !== null);
+};
+
