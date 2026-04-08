@@ -1,5 +1,5 @@
 /**
- * Servidor principal do microserviço MindClerky (Workflows)
+ * Servidor principal do microserviço MindFlow (workflows)
  */
 
 // Configurar timezone
@@ -33,7 +33,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.get('/', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
-    message: 'MindClerky API está funcionando',
+    message: 'OnlyFlow — API MindFlow (workflows) está funcionando',
     version: process.env.VERSION || packageJson.version || '1.0.0',
     timestamp: new Date().toISOString(),
     endpoints: {
@@ -89,7 +89,7 @@ connectSocket();
 
 // Iniciar servidor
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Servidor MindClerky rodando na porta ${PORT}`);
+  console.log(`🚀 Servidor MindFlow rodando na porta ${PORT}`);
   console.log(`📡 Ambiente: ${SERVER_CONFIG.NODE_ENV}`);
   console.log(`🌐 API disponível em http://localhost:${PORT}/api`);
 });

@@ -1,5 +1,5 @@
 /**
- * Configurações centralizadas do microserviço MindClerky
+ * Configurações centralizadas do microserviço MindFlow (workflows)
  */
 
 import dotenv from 'dotenv';

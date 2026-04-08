@@ -1,5 +1,5 @@
 /**
- * Serviço para executar workflows do MindClerky
+ * Serviço para executar workflows do MindFlow
  */
 
 import { WorkflowService, Workflow, WorkflowNode, WorkflowEdge } from './workflowService';

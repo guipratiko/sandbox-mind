@@ -1,5 +1,5 @@
 /**
- * Service para gerenciamento de Workflows (MindClerky)
+ * Service para gerenciamento de Workflows (MindFlow)
  * Trabalha com PostgreSQL
  */
 
