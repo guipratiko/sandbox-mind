@@ -11,6 +11,49 @@
 
 import { formatBrazilianPhone } from './numberNormalizer';
 
+/**
+ * Converte valor de variável (webhook/Typebot) para texto na mensagem.
+ * Objetos não viram "[object Object]": prioriza display_string/name/label e senão JSON.
+ */
+function valueToTemplateString(value: unknown): string {
+  if (value == null) {
+    return '';
+  }
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return '';
+    }
+  }
+  if (typeof value === 'object') {
+    const o = value as Record<string, unknown>;
+    const preferred =
+      o.display_string ??
+      o.displayString ??
+      o.name ??
+      o.label ??
+      o.title ??
+      o.text;
+    if (preferred != null && (typeof preferred === 'string' || typeof preferred === 'number')) {
+      return String(preferred);
+    }
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return '';
+    }
+  }
+  return String(value);
+}
+
+function escapeRegExpLiteral(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export interface ContactData {
   phone: string; // Número normalizado (ex: 5562998448536)
   name?: string; // Nome do contato
@@ -94,20 +137,20 @@ export const replaceVariables = (
     for (const [key, value] of Object.entries(typebotVariables)) {
       // Converter chave para variável com $ (ex: "Name" -> "$Name")
       const variableKey = `$${key}`;
-      // Converter valor para string
-      variables[variableKey] = value != null ? String(value) : '';
+      variables[variableKey] = valueToTemplateString(value);
       console.log(`🔍 DEBUG replaceVariables - Adicionando variável: ${variableKey} = ${variables[variableKey]}`);
     }
   }
 
   console.log(`🔍 DEBUG replaceVariables - variables final:`, JSON.stringify(variables, null, 2));
 
-  // Substituir todas as variáveis
+  // Substituir do placeholder mais longo para o mais curto (evita $a corromper $accountId)
   let result = text;
-  for (const [variable, value] of Object.entries(variables)) {
-    // Usar regex global para substituir todas as ocorrências
-    const regex = new RegExp(variable.replace(/\$/g, '\\$'), 'g');
-    result = result.replace(regex, value);
+  const sortedEntries = Object.entries(variables).sort((a, b) => b[0].length - a[0].length);
+  for (const [variable, value] of sortedEntries) {
+    const regex = new RegExp(escapeRegExpLiteral(variable), 'g');
+    // Callback evita que `$` no valor seja interpretado como metacaracter do replace
+    result = result.replace(regex, () => value);
   }
 
   return result;
