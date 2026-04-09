@@ -380,7 +380,8 @@ async function executeResponseNode(
   // Substituir variáveis no conteúdo (incluindo variáveis do Typebot)
   content = replaceVariables(content, contactData, 'Cliente', context.typebotVariables);
   
-  const mediaUrl = node.data?.mediaUrl || '';
+  let mediaUrl = node.data?.mediaUrl || '';
+  mediaUrl = replaceVariables(mediaUrl, contactData, 'Cliente', context.typebotVariables);
   let caption = node.data?.caption || '';
   // Substituir variáveis na legenda também
   caption = replaceVariables(caption, contactData, 'Cliente', context.typebotVariables);
