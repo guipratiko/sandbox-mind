@@ -1068,6 +1068,20 @@ export async function executeWorkflowFromWebhook(
       console.log(`📱 Telefone não encontrado, usando valor temporário: ${finalContactPhone}`);
     }
 
+    const instanceIdForContact = workflow.instanceId || '';
+
+    try {
+      await WorkflowService.addWorkflowContact(workflow.id, finalContactPhone, instanceIdForContact);
+      console.log(`✅ Contato ${finalContactPhone} registrado no workflow ${workflow.id} (entrada via webhook)`);
+    } catch {
+      console.log(`ℹ️ Contato ${finalContactPhone} já estava na lista do workflow ${workflow.id}`);
+    }
+    try {
+      emitWorkflowContactUpdate(userId, workflow.id, finalContactPhone, instanceIdForContact);
+    } catch (error) {
+      console.error('Erro ao emitir evento de contato do workflow:', error);
+    }
+
     // Criar contexto de execução
     // Para Webhook, usamos os dados do body como mensagem
     const messageText = JSON.stringify(bodyData);
@@ -1095,26 +1109,6 @@ export async function executeWorkflowFromWebhook(
 
     // Executar workflow começando pelo gatilho
     await executeNode(context, state, triggerNode.id);
-
-    // Para workflows Webhook, adicionar contato à lista APENAS se o workflow chegou ao final
-    if (state.hasReachedEnd) {
-      try {
-        await WorkflowService.addWorkflowContact(workflow.id, finalContactPhone, workflow.instanceId || '');
-        console.log(`✅ Contato ${finalContactPhone} adicionado ao workflow ${workflow.id} (após conclusão completa)`);
-      } catch (error) {
-        // Se já estiver na lista, apenas logar (não é um erro crítico)
-        console.log(`ℹ️ Contato ${finalContactPhone} já estava na lista do workflow ${workflow.id}`);
-      }
-      
-      // Emitir evento WebSocket para atualizar frontend em tempo real
-      try {
-        emitWorkflowContactUpdate(userId, workflow.id, finalContactPhone, workflow.instanceId || '');
-      } catch (error) {
-        console.error('Erro ao emitir evento de contato do workflow:', error);
-      }
-    } else {
-      console.log(`⏭️ Contato ${finalContactPhone} não adicionado ao workflow (fluxo não completou)`);
-    }
 
     console.log(`✅ Workflow ${workflow.name} executado com sucesso`);
   } catch (error) {

@@ -502,21 +502,22 @@ export const receiveTypebotWebhook = async (
     // Vamos buscar o userId do workflow
     const userId = targetWorkflow.userId;
 
-    // Importar e executar o workflow executor
     const { executeWorkflowFromTypebot } = await import('../services/workflowExecutor');
-    
-    await executeWorkflowFromTypebot(
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Webhook aceito; workflow em processamento em segundo plano',
+      workflowId: targetWorkflow.id,
+      nodeId,
+    });
+
+    void executeWorkflowFromTypebot(
       targetWorkflow,
       normalizedPhone,
       bodyData,
       userId
-    );
-
-    res.status(200).json({
-      status: 'success',
-      message: 'Webhook processado com sucesso',
-      workflowId: targetWorkflow.id,
-      nodeId,
+    ).catch((err: unknown) => {
+      console.error('❌ Erro ao executar workflow após webhook Typebot (assíncrono):', err);
     });
   } catch (error: unknown) {
     console.error('❌ Erro ao processar webhook do Typebot:', error);
@@ -572,21 +573,20 @@ export const receiveWebhook = async (
 
       // Se o nó já tem campos selecionados, executar workflow automaticamente
       if (webhookNode?.data?.selectedFields && webhookNode.data.selectedFields.length > 0) {
-        console.log(`🚀 Executando workflow automaticamente (campos já mapeados)`);
-        
+        console.log(`🚀 Enfileirando execução do workflow (campos já mapeados)`);
+
         const userId = targetWorkflow.userId;
-        
-        await executeWorkflowFromWebhook(
-          targetWorkflow,
-          payload,
-          userId
-        );
+        const workflowToRun = targetWorkflow;
 
         res.status(200).json({
           status: 'success',
-          message: 'Webhook recebido e workflow executado',
+          message: 'Webhook recebido; workflow em processamento em segundo plano',
           workflowId: targetWorkflow.id,
           nodeId,
+        });
+
+        void executeWorkflowFromWebhook(workflowToRun, payload, userId).catch((err: unknown) => {
+          console.error('❌ Erro ao executar workflow após webhook (assíncrono):', err);
         });
         return;
       }
