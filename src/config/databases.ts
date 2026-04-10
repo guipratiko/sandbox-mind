@@ -10,12 +10,39 @@ import { POSTGRES_CONFIG, MONGODB_CONFIG } from './constants';
 
 // ============================================
 // PostgreSQL (Workflows - compartilhado)
+// Alinhado ao Backend: timeout curto (2s) falha em rede lenta / TLS para Postgres remoto.
 // ============================================
+function postgresPoolInt(envKey: string, fallback: number, min: number, max: number): number {
+  const raw = process.env[envKey];
+  const n = raw ? parseInt(raw, 10) : NaN;
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+const postgresConnectionString = POSTGRES_CONFIG.URI;
+
+const connectionStringForLog = postgresConnectionString.replace(/:[^:@]+@/, ':****@');
+console.log(`📡 MindClerky PostgreSQL: ${connectionStringForLog}`);
+
+const POSTGRES_POOL_MAX = postgresPoolInt('POSTGRES_POOL_MAX', 20, 2, 100);
+const POSTGRES_POOL_CONNECTION_TIMEOUT_MS = postgresPoolInt(
+  'POSTGRES_POOL_CONNECTION_TIMEOUT_MS',
+  20_000,
+  3000,
+  120_000
+);
+const POSTGRES_POOL_IDLE_MS = postgresPoolInt('POSTGRES_POOL_IDLE_TIMEOUT_MS', 30_000, 5000, 300_000);
+
+console.log(
+  `📡 MindClerky pool: max=${POSTGRES_POOL_MAX}, connectionTimeout=${POSTGRES_POOL_CONNECTION_TIMEOUT_MS}ms, idle=${POSTGRES_POOL_IDLE_MS}ms`
+);
+
 export const pgPool = new Pool({
-  connectionString: POSTGRES_CONFIG.URI,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionString: postgresConnectionString,
+  max: POSTGRES_POOL_MAX,
+  idleTimeoutMillis: POSTGRES_POOL_IDLE_MS,
+  connectionTimeoutMillis: POSTGRES_POOL_CONNECTION_TIMEOUT_MS,
+  keepAlive: true,
 });
 
 // Event listeners para PostgreSQL

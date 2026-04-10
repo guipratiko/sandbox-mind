@@ -20,14 +20,16 @@ export const JWT_CONFIG = {
   EXPIRE: process.env.JWT_EXPIRE || '7d',
 };
 
-// PostgreSQL Configuration (compartilhado com Backend)
+// PostgreSQL Configuration (compartilhado com Backend — mesma ordem de variáveis que o Backend)
 export const POSTGRES_CONFIG = {
   HOST: process.env.POSTGRES_HOST || 'localhost',
   PORT: parseInt(process.env.POSTGRES_PORT || '5432', 10),
   DB: process.env.POSTGRES_DB || 'clerky',
   USER: process.env.POSTGRES_USER || 'postgres',
   PASSWORD: process.env.POSTGRES_PASSWORD || 'postgres',
-  URI: process.env.POSTGRES_URI || 
+  URI:
+    process.env.POSTGRES_URI?.trim() ||
+    process.env.DATABASE_URL?.trim() ||
     `postgres://${process.env.POSTGRES_USER || 'postgres'}:${process.env.POSTGRES_PASSWORD || 'postgres'}@${process.env.POSTGRES_HOST || 'localhost'}:${process.env.POSTGRES_PORT || '5432'}/${process.env.POSTGRES_DB || 'clerky'}`,
 };
 
