@@ -31,6 +31,12 @@ export interface IInstance extends Document {
   instanceId?: string;
   hash?: string;
   status: 'created' | 'connecting' | 'connected' | 'disconnected' | 'error';
+  ownerJid?: string;
+  phone_number_id?: string;
+  waba_id?: string;
+  display_phone_number?: string;
+  meta_access_token?: string;
+  is_coex?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -144,6 +150,12 @@ const InstanceSchema: Schema = new Schema(
       enum: ['created', 'connecting', 'connected', 'disconnected', 'error'],
       default: 'created',
     },
+    ownerJid: { type: String, default: null },
+    phone_number_id: { type: String, default: null },
+    waba_id: { type: String, default: null },
+    display_phone_number: { type: String, default: null },
+    meta_access_token: { type: String, default: null },
+    is_coex: { type: Boolean, default: false },
   },
   {
     timestamps: true,
